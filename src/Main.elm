@@ -1,15 +1,18 @@
 module Main exposing (..)
 
-import Browser
+import Browser exposing (Document)
 
 import Html exposing (Html, text, div)
+import Html.Attributes exposing (id, class)
 
-type alias Model = Int
+import Game exposing (Game)
+
+type alias Model = Game
 
 type Msg
-    = NoOp
+    = GameMsg Game.Msg
 
-main = Browser.element
+main = Browser.document
     {   init = init
     ,   view = view
     ,   subscriptions = subscriptions
@@ -17,15 +20,27 @@ main = Browser.element
     }
 
 init : () -> (Model, Cmd Msg)
-init _ = (0, Cmd.none)
+init _ = (Game.init (), Cmd.none)
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
-    div [] [ text "Hello World" ]
+    {   title = "IO Game"
+    ,   body = 
+        [   Game.view model |> Html.map GameMsg
+        ]
+    }
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update msg model = (model, Cmd.none)
+update msg model =
+    case msg of
+        GameMsg subMsg ->
+            let
+                (newGame, subCmd) = Game.update subMsg model
+            in
+                (   newGame
+                ,   Cmd.map GameMsg subCmd
+                )

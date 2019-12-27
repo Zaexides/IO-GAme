@@ -1,0 +1,48 @@
+:root
+{
+    --primary-color: rgb(7, 17, 7);
+    --secondary-color: rgb(57, 99, 57);
+    --tertiary-color: rgb(150, 199, 157);
+
+    --secondary-border-color: rgb(76, 126, 76);
+}
+
+body
+{
+    margin: 0;
+    font-family: "Roboto Mono", monospace;
+    background-color: var(--primary-color);
+    color: var(--tertiary-color);
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#gameboard
+{
+    width: 100%;
+    height: 100%;
+}
+
+.gameobject
+{
+    display: inline-block;
+    background-color: var(--secondary-color);
+    padding: 0.6rem;
+    border-color: var(--secondary-border-color);
+    border-style: outset;
+    border-width: 2px;
+}
+
+.grab-area
+{
+    position: relative;
+    width: 32px;
+    height: 16px;
+    background-color: var(--secondary-color);
+    background-image: url("../img/grab.png");
+    cursor: grab;
+    border-color: var(--secondary-border-color);
+    border-style: outset outset none outset;
+    border-width: 2px;
+}
