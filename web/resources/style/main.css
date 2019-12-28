@@ -37,12 +37,17 @@ body
 .grab-area
 {
     position: relative;
-    width: 32px;
-    height: 16px;
+    width: 16px;
+    height: 12px;
     background-color: var(--secondary-color);
     background-image: url("../img/grab.png");
     cursor: grab;
     border-color: var(--secondary-border-color);
     border-style: outset outset none outset;
     border-width: 2px;
+}
+
+.grab-area.grabbed
+{
+    cursor: grabbing;
 }

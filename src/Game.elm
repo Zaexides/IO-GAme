@@ -1,8 +1,10 @@
-module Game exposing (Game, GameObject, Component(..), Msg, view, init, update)
+module Game exposing (Game, GameObject, Component(..), Msg, Position, view, init, update)
 
 import Html exposing (Html, div, article)
 import Html.Attributes exposing (id, class, style)
-import Html.Events exposing (onMouseDown, onMouseUp)
+import Html.Events exposing (onMouseDown, onMouseUp, onMouseLeave, on)
+
+import Json.Decode as JSON exposing (Decoder)
 
 import Game.Components.Processor as ProcessorComponent exposing (Processor)
 
@@ -11,22 +13,28 @@ type alias Game =
     }
 
 type alias GameObject =
-    {   position : (Int, Int)
+    {   position : Position
     ,   isGrabbed : Bool
     ,   component : Component
+    }
+
+type alias Position =
+    {   x : Int
+    ,   y : Int
     }
 
 type Component
     = Processor Processor
 
 type Msg
-    = OnStartGrab GameObject
-    | OnEndGrab GameObject
+    = OnStartGrab Int
+    | OnEndGrab
+    | OnMouseMoved Position
 
 init : () -> Game
 init _ =
     {   gameObjects =
-        [   {   position = (50, 200)
+        [   {   position = { x = 200, y = 50}
             ,   isGrabbed = False
             ,   component = Processor
                 {   code = []
@@ -39,20 +47,26 @@ view : Game -> Html Msg
 view game =
     div
     [   id "gameboard"
-    ] <| List.map viewGameObject game.gameObjects
+    ,   onMouseUp OnEndGrab
+    ,   onMouseLeave OnEndGrab
+    ,   on "mousemove" (JSON.map OnMouseMoved mouseMoveDecoder)
+    ] <| List.indexedMap viewGameObject game.gameObjects
 
-viewGameObject : GameObject -> Html Msg
-viewGameObject gameObject =
+viewGameObject : Int -> GameObject -> Html Msg
+viewGameObject id gameObject =
     let
-        (x, y) = gameObject.position
+        position = gameObject.position
+        (x,y) = 
+            (   position.x
+            ,   position.y
+            )
     in
         div
         [   style "position" "relative"
-        ,   style "top" (String.fromInt x ++ "px")
-        ,   style "left" (String.fromInt y ++ "px")
-        ,   onMouseDown (OnStartGrab gameObject)
+        ,   style "left" (String.fromInt x ++ "px")
+        ,   style "top" (String.fromInt y ++ "px")
         ]
-        [   viewGrabbyPart   
+        [   viewGrabbyPart gameObject.isGrabbed id
         ,   article
             [   class "gameobject"
             ,   class (getGameObjectComponentClassName gameObject.component)
@@ -61,10 +75,11 @@ viewGameObject gameObject =
             ]
         ]
 
-viewGrabbyPart : Html Msg
-viewGrabbyPart =
+viewGrabbyPart : Bool -> Int -> Html Msg
+viewGrabbyPart isGrabbed id =
     div
-    [   class "grab-area"
+    [   class (if isGrabbed then "grab-area grabbed" else "grab-area")
+    ,   onMouseDown (OnStartGrab id)
     ]
     [
     ]
@@ -82,5 +97,51 @@ getGameObjectViewContents component =
 update : Msg -> Game -> (Game, Cmd Msg)
 update msg game =
     case msg of
-        OnStartGrab gameObject -> Debug.todo "~"
-        OnEndGrab gameObject -> Debug.todo "~"
+        OnStartGrab id -> 
+            (   { game | gameObjects = List.indexedMap (startGrabStateFor id) game.gameObjects }
+            ,   Cmd.none
+            )
+        OnEndGrab ->
+            (   { game | gameObjects = List.map endGrabState game.gameObjects }
+            ,   Cmd.none
+            )
+        OnMouseMoved mousePosition ->
+            (   { game | gameObjects = List.map (moveGameObjectToWhenGrabbed mousePosition) game.gameObjects }
+            ,   Cmd.none
+            )
+
+startGrabStateFor : Int -> Int -> GameObject -> GameObject
+startGrabStateFor target current gameObject =
+    if (target == current) then
+        { gameObject | isGrabbed = True }
+    else
+        gameObject
+
+endGrabState : GameObject -> GameObject
+endGrabState gameObject =
+    { gameObject | isGrabbed = False }
+
+movementOffset : Position
+movementOffset =
+    {   x = -8
+    ,   y = -8
+    }
+
+moveGameObjectToWhenGrabbed : Position -> GameObject -> GameObject
+moveGameObjectToWhenGrabbed targetPosition gameObject =
+    if (gameObject.isGrabbed) then
+        { gameObject | position = (translatePosition targetPosition movementOffset) }
+    else
+        gameObject
+
+translatePosition : Position -> Position -> Position
+translatePosition position translation =
+    {   x = position.x + translation.x
+    ,   y = position.y + translation.y
+    }
+
+mouseMoveDecoder : Decoder Position
+mouseMoveDecoder =
+    JSON.map2 Position
+        ( JSON.at ["clientX"] JSON.int )
+        ( JSON.at ["clientY"] JSON.int )
